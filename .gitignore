@@ -1,0 +1,28 @@
+# API 키
+.env
+
+# 논문 PDF (저작권 보호)
+papers/inbox/*.pdf
+papers/processed/*.pdf
+
+# 추출 데이터
+data/extracted/*.json
+data/validated/*.json
+data/master_dataset.json
+data/master_dataset.csv
+
+# 로그
+logs/*.log
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+.env
