@@ -1,0 +1,163 @@
+{
+  "timestamp": "2026-05-04 16:00:18",
+  "summary": {
+    "downloaded": 0,
+    "skipped": 33,
+    "failed": 12,
+    "total": 19
+  },
+  "papers": [
+    {
+      "paperId": "6b6a719245efd83f032734f916543e7e9e0a8c87",
+      "title": "Superconductivity with a high upper critical field in an equiatomic high-entropy alloy Sc–V–Ti–Hf–Nb",
+      "authors": "S. Jangid, P. Meena, R. K. Kushwaha",
+      "year": 2024,
+      "doi": "10.1063/5.0200805",
+      "pdf_url": "https://arxiv.org/pdf/2404.17363"
+    },
+    {
+      "paperId": "2594d9318b8edf8f3c83ab43e21afd69822d5a34",
+      "title": "Superconductivity and hardness of the equiatomic high-entropy alloy HfMoNbTiZr",
+      "authors": "J. Kitagawa, Kazuhisa Hoshi, Yuta Kawasaki",
+      "year": 2022,
+      "doi": "10.1016/j.jallcom.2022.166473",
+      "pdf_url": "https://arxiv.org/pdf/2207.11845"
+    },
+    {
+      "paperId": "fb60c2d08c7a6260fe2c845f5c329bb0641936ef",
+      "title": "Equiatomic 9-cation high-entropy carbide ceramics of the IVB, VB, and VIB groups and thermodynamic analysis of the sintering process",
+      "authors": "Yuan Qin, Ji‐Xuan Liu, Yongcheng Liang",
+      "year": 2022,
+      "doi": "10.1007/s40145-022-0594-2",
+      "pdf_url": "https://link.springer.com/content/pdf/10.1007/s40145-022-0594-2.pdf"
+    },
+    {
+      "paperId": "5798c2554aade484604fca9ad5e96ad4544fd303",
+      "title": "Influence of equiatomic Zr/(Ti,Nb) substitution on microstructure and ultra-high strength of (Ti,Zr,Nb)C medium-entropy ceramics at 1900 °C",
+      "authors": "Qingqing Yang, Xin‐Gang Wang, Wei-Chao Bao",
+      "year": 2022,
+      "doi": "10.1007/s40145-022-0623-1",
+      "pdf_url": "https://link.springer.com/content/pdf/10.1007/s40145-022-0623-1.pdf"
+    },
+    {
+      "paperId": "59fa791762b2490edddcd70f04153f4714648a2d",
+      "title": "Data-driven design of novel lightweight refractory high-entropy alloys with superb hardness and corrosion resistance",
+      "authors": "Tianchuan Gao, Jianbao Gao, Shenglan Yang",
+      "year": 2024,
+      "doi": "10.1038/s41524-024-01457-6",
+      "pdf_url": "https://www.nature.com/articles/s41524-024-01457-6.pdf"
+    },
+    {
+      "paperId": "ad3be3b8ee15eb581396983c304d3b7bb547d3ca",
+      "title": "Alloy design for intrinsically ductile refractory high-entropy alloys",
+      "authors": "S. Sheikh, S. Shafeie, Q. Hu",
+      "year": 2016,
+      "doi": "10.1063/1.4966659",
+      "pdf_url": "http://publications.lib.chalmers.se/records/fulltext/245374/local_245374.pdf"
+    },
+    {
+      "paperId": "a29a5624f35515a1e5d4505779cc93d509389e87",
+      "title": "Microstructural Design for Improving Ductility of An Initially Brittle Refractory High Entropy Alloy",
+      "authors": "V. Soni, O. Senkov, B. Gwalani",
+      "year": 2018,
+      "doi": "10.1038/s41598-018-27144-3",
+      "pdf_url": "https://www.nature.com/articles/s41598-018-27144-3.pdf"
+    },
+    {
+      "paperId": "d6c0e70ae17f746bc2f95f61e06603dc960d2559",
+      "title": "Design and Characterization of Self-Lubricating Refractory High Entropy Alloy-Based Multilayered Films.",
+      "authors": "D. Luo, Qing Zhou, Wenting Ye",
+      "year": 2021,
+      "doi": "10.1021/acsami.1c16949",
+      "pdf_url": "https://arxiv.org/pdf/2110.04199"
+    },
+    {
+      "paperId": "d49099b05cafc2b6d0e59c3ea0175e91a8e355ad",
+      "title": "Design and characterization of eutectic refractory high entropy alloys",
+      "authors": "N. Yurchenko, E. Panina, S. Zherebtsov",
+      "year": 2021,
+      "doi": "10.1016/J.MTLA.2021.101057",
+      "pdf_url": "http://dspace.bsu.edu.ru/bitstream/123456789/44306/1/Yurchenko_Design.pdf"
+    },
+    {
+      "paperId": "29c202a1b803c1f314887a4abb94942e681e1a46",
+      "title": "A quinary WTaCrVHf nanocrystalline refractory high-entropy alloy withholding extreme irradiation environments",
+      "authors": "O. El Atwani, H. T. Vo, M. Tunes",
+      "year": 2023,
+      "doi": "10.1038/s41467-023-38000-y",
+      "pdf_url": "https://www.nature.com/articles/s41467-023-38000-y.pdf"
+    },
+    {
+      "paperId": "1382876f5a387264e2c3fc1f4e6b75b64b823dc5",
+      "title": "Mining of lattice distortion, strength, and intrinsic ductility of refractory high entropy alloys",
+      "authors": "Chris Tandoc, Yong-Jie Hu, L. Qi",
+      "year": 2023,
+      "doi": "10.1038/s41524-023-00993-x",
+      "pdf_url": "https://www.nature.com/articles/s41524-023-00993-x.pdf"
+    },
+    {
+      "paperId": "6c70f715442fb5a5be1beb4b3f5f854c466d856f",
+      "title": "Vanadium is an optimal element for strengthening in both fcc and bcc high-entropy alloys",
+      "authors": "B. Yin, F. Maresca, W. Curtin",
+      "year": 2020,
+      "doi": "10.1016/j.actamat.2020.01.062",
+      "pdf_url": "https://pure.rug.nl/ws/files/136414836/1_s2.0_S1359645420300884_main.pdf"
+    },
+    {
+      "paperId": "9a208e0e24a4eb0266487f94b54e0edbe2aea1ad",
+      "title": "Refractory high entropy alloy with ductile intermetallic B2 matrix / hard bcc particles and exceptional strain hardening capacity",
+      "authors": "N. Yurchenko, E. Panina, D. Shaysultanov",
+      "year": 2021,
+      "doi": "10.1016/j.mtla.2021.101225",
+      "pdf_url": "http://dspace.bsu.edu.ru/bitstream/123456789/48861/1/Yurchenko_Refractory%20high.pdf"
+    },
+    {
+      "paperId": "a94159138e0357812ee9cd4d7344121e7407cdde",
+      "title": "High-entropy alloy TiV2ZrCrMnFeNi for hydrogen storage at room temperature with full reversibility and good activation",
+      "authors": "Shivam Dangwal, K. Edalati",
+      "year": 2024,
+      "doi": "10.1016/j.scriptamat.2023.115774",
+      "pdf_url": "https://arxiv.org/pdf/2402.11781"
+    },
+    {
+      "paperId": "134bddcb5bcd686a4d2bff63c5a0a4ccd2cd7878",
+      "title": "Reducing hot tearing by grain boundary segregation engineering in additive manufacturing: example of an AlxCoCrFeNi high-entropy alloy",
+      "authors": "Zhongji Sun, X. Tan, Chengcheng Wang",
+      "year": 2021,
+      "doi": "10.1016/j.actamat.2020.116505",
+      "pdf_url": "https://hal.archives-ouvertes.fr/hal-03059610/file/2020_Sun_AM_hot%20tearing%20grain%20boundary%20segregation%20additive%20manufacturing%20AlxCoCrFeNi%20high-entropy%20alloy.pdf"
+    },
+    {
+      "paperId": "a7af26cbdb4553268e71b55c8f6a5db688492533",
+      "title": "Refractory TaTiNb, TaTiNbZr, and TaTiNbZrX (X = Mo, W) high entropy alloys by combined use of high energy ball milling and spark plasma sintering: Structural characterization, mechanical properties, electrical resistivity, and thermal conductivity",
+      "authors": "N. Shkodich, K. Kuskov, A. Sedegov",
+      "year": 2021,
+      "doi": "10.1016/j.jallcom.2021.162030",
+      "pdf_url": "http://dspace.bsu.edu.ru/bitstream/123456789/48142/1/Stepanov_Refractory.pdf"
+    },
+    {
+      "paperId": "a9045cf2cddb83cc65277637d6727fb525be2318",
+      "title": "Instability of the body-centered cubic lattice within the sticky hard sphere and Lennard-Jones model obtained from exact lattice summations.",
+      "authors": "Antony Burrows, S. Cooper, P. Schwerdtfeger",
+      "year": 2021,
+      "doi": "10.1103/PhysRevE.104.035306",
+      "pdf_url": "https://arxiv.org/pdf/2107.11380"
+    },
+    {
+      "paperId": "a4c6230a0531cd58b2793faae5e3f0a4af60d8ae",
+      "title": "A map of single-phase high-entropy alloys",
+      "authors": "Wei Chen, A. Hilhorst, Georgios Bokas",
+      "year": 2022,
+      "doi": "10.1038/s41467-023-38423-7",
+      "pdf_url": "https://www.nature.com/articles/s41467-023-38423-7.pdf"
+    },
+    {
+      "paperId": "8404c739c8a1fc7fdd0ab6b208565a7a1e4c3d32",
+      "title": "Surface crack initiation mechanism for body centered cubic materials in the gigacycle fatigue domain",
+      "authors": "D. Wagner, Chong Wang, Zhiyong Huang",
+      "year": 2016,
+      "doi": "10.1016/J.IJFATIGUE.2016.05.036",
+      "pdf_url": "https://hal.parisnanterre.fr//hal-01687219/file/%5BA43%5D%20Wagner.pdf"
+    }
+  ]
+}
