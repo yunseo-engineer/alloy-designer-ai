@@ -168,14 +168,14 @@ def cross_validate_model(
     groups가 None이면 (db_setup에서 클러스터를 부여하지 않은 경우)
     index 기반 더미 그룹으로 폴백하고 경고를 표시함.
     """
-    print(f"\n  [{label}] GroupKFold Cross Validation (n_splits=5)")
+    print(f"\n  [{label}] GroupKFold Cross Validation (n_splits=2)")
 
     # groups 없으면 폴백
     if groups is None or len(set(groups)) < 5:
         print(f"  ⚠️  groups 부족 — 각 샘플을 독립 그룹으로 처리 (leakage 가능)")
         groups = np.arange(len(X))  # 각 샘플 = 독립 그룹
 
-    gkf = GroupKFold(n_splits=5)
+    gkf = GroupKFold(n_splits=2)
 
     r2_scores, mae_scores, rmse_scores = [], [], []
 
