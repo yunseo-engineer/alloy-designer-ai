@@ -182,12 +182,29 @@ def load_to_sqlite(df: pd.DataFrame, db_path: Path) -> sqlite3.Connection:
 # ══════════════════════════════════════════════════════════════
 # 3. DB 값 업데이트
 # ══════════════════════════════════════════════════════════════
+def _to_python_scalar(val):
+        """numpy/pandas 타입 → Python 기본 타입 변환."""
+        if val is None:
+            return None
+        try:
+            if pd.isna(val):
+                return None
+        except (TypeError, ValueError):
+            pass
+        if isinstance(val, np.bool_):
+            return int(val)
+        if isinstance(val, np.integer):
+            return int(val)
+        if isinstance(val, np.floating):
+            return float(val)
+        return val
+
 def _save_column(conn: sqlite3.Connection, df: pd.DataFrame, col: str) -> int:
     """rowid 기준으로 measurements 테이블의 특정 컬럼 업데이트."""
     cur = conn.cursor()
     updated = 0
     for _, row in df[["_rowid", col]].iterrows():
-        val = None if pd.isna(row[col]) else row[col]
+        val = _to_python_scalar(row[col])
         cur.execute(
             f"UPDATE measurements SET {col} = ? WHERE rowid = ?",
             (val, int(row["_rowid"]))
@@ -210,8 +227,9 @@ def update_is_target_met(conn: sqlite3.Connection) -> None:
     mask_el  = df["meas_elongation_pct"] > EL_KPI
     mask_bcc = (df.get("meas_BCC_fraction_pct", pd.Series(np.nan, index=df.index)) > BCC_KPI).fillna(False)
 
-    df["meas_is_target_met"] = (mask_ys & mask_el & mask_bcc).astype(int)
+    df["meas_is_target_met"] = [int(v) for v in (mask_ys & mask_el & mask_bcc)]
 
+    
     n = _save_column(conn, df, "meas_is_target_met")
     met = int(df["meas_is_target_met"].sum())
     print(f"       is_target_met=1: {met}행  /  =0: {len(df)-met}행  (업데이트 {n}행)")
@@ -361,7 +379,7 @@ def build_ml_dataset(
     elem_cols: list,
     desc_cols: list,
     process_cols: list = None,
-    filter_rt_only: bool = False,
+    filter_rt_only: bool = True,
     filter_tensile: bool = True,
 ) -> tuple:
     """
@@ -713,9 +731,10 @@ def print_summary(df, ml_data, conn):
         print(f"  {str(row['meas_data_split']):<10}: {row['n']:>4}행")
 
     print("\n  [is_target_met]")
-    met = pd.read_sql("SELECT CAST(meas_is_target_met AS INTEGER) as val, COUNT(*) as n FROM measurements GROUP BY meas_is_target_met", conn)
-    for _, row in met.iterrows():
-        print(f"  ={int(row['val'])}: {row['n']:>4}행")
+    n_met     = pd.read_sql("SELECT COUNT(*) as n FROM measurements WHERE meas_is_target_met = 1", conn)["n"].iloc[0]
+    n_not_met = pd.read_sql("SELECT COUNT(*) as n FROM measurements WHERE meas_is_target_met = 0 OR meas_is_target_met IS NULL", conn)["n"].iloc[0]
+    print(f"  =1: {n_met:>4}행")
+    print(f"  =0: {n_not_met:>4}행")    
 
     print("\n  [생성 파일]")
     print("  data/hea_designer.db      (measurements + v_ml_features + experiment_log)")

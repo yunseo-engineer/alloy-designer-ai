@@ -13,17 +13,16 @@ data/extracted/ 의 JSON 파일들을 검증하고, 통과한 것을 data/valida
 [수정 이력]
   v2 (2026-05-16):
     Fix 1. dynamic_compression — CRITICAL 제거, WARNING으로 변경
-           → 고변형률 시험값이지만 데이터 자체는 보존.
-             정적 YS 모델 학습 시에는 db_setup.py filter_tensile=True 로 자동 제외.
-             나중에 dynamic YS 별도 모델 학습 시 활용 가능.
     Fix 2. YS 상한을 test_mode별로 분리
-           → tensile/compression: 5000 MPa 초과 시 CRITICAL (DFT 오분류 의심)
-           → micropillar_compression: 15000 MPa까지 WARNING만
-           → dynamic_compression: 상한 없음 (WARNING 태그만)
-    Fix 3. critical / warning 완전 분리 — critical 있으면 FAIL, warning만이면 PASS
-    Fix 4. 검증 결과 로그 상세화 — PASS / WARN / FAIL 이유 명시
-    Fix 5. 조성 합계 허용 범위 99.5~100.5 → 95.0~105.0
-           → LLM 추출 시 미량 원소 누락 또는 반올림 오차 허용
+    Fix 3. critical / warning 완전 분리
+    Fix 4. 검증 결과 로그 상세화
+    Fix 5. 조성 합계 허용 범위 95.0~105.0
+  v3 (2026-05-16):
+    Fix 6. 검증 단위를 논문 → alloy 단위로 변경
+           CRITICAL이 있는 alloy만 제외하고 논문은 살림.
+           정상 alloy가 1개 이상이면 PASS → validated/ 복사.
+           모든 alloy가 CRITICAL이면 논문 전체 FAIL.
+           validated/ 복사 시 CRITICAL alloy가 제거된 JSON을 저장.
 
 사용법:
     python scripts/validate.py
@@ -33,6 +32,7 @@ import json
 import logging
 import shutil
 import sys
+from copy import deepcopy
 from pathlib import Path
 
 ROOT          = Path(__file__).resolve().parent.parent
@@ -54,41 +54,24 @@ log = logging.getLogger("validate")
 
 TARGET_ELEMENTS = ["Ti", "Zr", "Hf", "V", "Nb", "Ta", "Cr", "Mo", "W", "Al"]
 
-# ─────────────────────────────────────────────────────────────
-# Fix 5: 조성 합계 허용 범위
-# LLM 추출 시 미량 원소 누락이나 반올림 오차로 합계가 정확히 100이 아닐 수 있음.
-# 95~105 범위로 넓혀서 정상 논문이 FAIL되는 경우를 방지.
-# ─────────────────────────────────────────────────────────────
 COMPOSITION_SUM_MIN = 95.0
 COMPOSITION_SUM_MAX = 105.0
 
-# ─────────────────────────────────────────────────────────────
-# Fix 1: 허용 test_mode 목록
-# dynamic_compression 유지 — 데이터 보존 목적.
-#   정적 YS 모델 학습 시: db_setup.py filter_tensile=True 로 자동 제외됨.
-#   나중에 dynamic YS 별도 모델 학습 시 이 데이터를 활용할 수 있음.
-# ─────────────────────────────────────────────────────────────
 VALID_TEST_MODES = {
     "tensile",
     "compression",
-    "micropillar_compression",  # WARNING: 크기 효과 있음, db_setup에서 필터링
-    "dynamic_compression",      # WARNING: 고변형률 시험, 정적 모델 학습 시 db_setup에서 제외
+    "micropillar_compression",
+    "dynamic_compression",
     "nanoindentation",
     "bending",
     "hardness_only",
 }
 
-# ─────────────────────────────────────────────────────────────
-# Fix 2: test_mode별 YS 상한
-# tensile/compression:          벌크 합금 최대 ~2500 MPa → 여유 포함 5000
-# micropillar_compression:      크기 효과로 최대 ~15000 MPa 가능
-# dynamic_compression:          고변형률이라 상한 규정 어려움 → None(무제한)
-# ─────────────────────────────────────────────────────────────
 YS_UPPER = {
     "tensile":                 5000,
     "compression":             5000,
     "micropillar_compression": 15000,
-    "dynamic_compression":     None,   # 상한 없음, WARNING 태그만
+    "dynamic_compression":     None,
     "nanoindentation":         5000,
     "bending":                 5000,
     "hardness_only":           5000,
@@ -102,13 +85,12 @@ def validate_alloy(alloy: dict) -> tuple[list[str], list[str]]:
     """
     단일 alloy 검증.
     반환: (critical_list, warning_list)
-    critical → 논문 전체 FAIL
+    critical → 이 alloy만 제외 (논문 전체 FAIL 아님)
     warning  → 통과하되 로그에 기록
     """
     critical, warnings = [], []
     aid = alloy.get("alloy_id", "?")
 
-    # 조성 합산
     total = 0.0
     for el in TARGET_ELEMENTS:
         v = alloy.get(f"{el}_at")
@@ -119,20 +101,17 @@ def validate_alloy(alloy: dict) -> tuple[list[str], list[str]]:
             critical.append(f"[{aid}] {el}_at 음수: {v}")
         total += v
 
-    # Fix 5: 허용 범위 95~105
     if not (COMPOSITION_SUM_MIN <= total <= COMPOSITION_SUM_MAX):
         critical.append(
             f"[{aid}] 조성 합계 비정상: {total:.2f} at% "
             f"(허용: {COMPOSITION_SUM_MIN}~{COMPOSITION_SUM_MAX})"
         )
-    elif not (95.0 <= total <= 105.0):
-        # 95~99 또는 101~105 구간 → 허용하되 경고
+    elif not (99.0 <= total <= 101.0):
         warnings.append(
             f"[{aid}] 조성 합계 {total:.2f} at% — "
             f"허용 범위 내이나 100에서 벗어남 (LLM 추출 오차 가능)"
         )
 
-    # n_elements 일관성 (WARNING만 — 추출 오차 허용)
     nonzero  = sum(1 for el in TARGET_ELEMENTS if (alloy.get(f"{el}_at") or 0) > 0)
     reported = alloy.get("n_elements")
     if reported is not None and reported != nonzero:
@@ -150,30 +129,25 @@ def validate_measurement(meas: dict, alloy_id: str) -> tuple[list[str], list[str
     """
     단일 measurement 검증.
     반환: (critical_list, warning_list)
+    measurement CRITICAL은 해당 alloy 전체를 제외시킴.
     """
     critical, warnings = [], []
     mid       = meas.get("measurement_id", "?")
     test_mode = meas.get("test_mode")
 
-    # ── Fix 1: test_mode 검증 ────────────────────────────────
     if test_mode not in VALID_TEST_MODES:
         critical.append(f"[{mid}] test_mode 미정의: '{test_mode}'")
     elif test_mode == "dynamic_compression":
-        # Fix 1: WARNING만 — 데이터 보존, 학습 시 db_setup에서 제외
         warnings.append(
             f"[{mid}] test_mode=dynamic_compression — "
-            f"고변형률 시험값 (정적 YS 대비 2~3배 높음). "
-            f"정적 모델 학습 시 db_setup filter_tensile=True 로 자동 제외. "
-            f"dynamic 전용 모델 학습 시 활용 가능."
+            f"고변형률 시험값. 정적 모델 학습 시 db_setup에서 자동 제외."
         )
     elif test_mode == "micropillar_compression":
         warnings.append(
             f"[{mid}] test_mode=micropillar_compression — "
-            f"나노 크기 효과로 YS 뻥튀기 가능. "
-            f"db_setup filter_tensile=True 로 자동 제외."
+            f"나노 크기 효과 가능. db_setup에서 자동 제외."
         )
 
-    # ── Fix 2: YS 범위 — test_mode별 상한 ───────────────────
     ys = meas.get("YS_MPa")
     if ys is not None:
         upper = YS_UPPER.get(test_mode, 5000)
@@ -181,88 +155,140 @@ def validate_measurement(meas: dict, alloy_id: str) -> tuple[list[str], list[str
             critical.append(f"[{mid}] YS_MPa 비물리적(≤0): {ys}")
         elif upper is not None and ys >= upper:
             if test_mode == "micropillar_compression":
-                # 크기 효과로 높을 수 있음 → WARNING
-                warnings.append(
-                    f"[{mid}] YS={ys} MPa (micropillar, 크기 효과 가능)"
-                )
+                warnings.append(f"[{mid}] YS={ys} MPa (micropillar, 크기 효과 가능)")
             else:
-                # tensile/compression에서 5000 초과 = DFT 오분류 의심 → CRITICAL
                 critical.append(
                     f"[{mid}] YS={ys} MPa > {upper} MPa (mode={test_mode}) — "
-                    f"DFT 계산값 오분류 또는 비현실적 값. JSON 확인 필요."
+                    f"DFT 오분류 또는 비현실적 값."
                 )
-        # dynamic은 upper=None이므로 범위 체크 자체를 스킵
 
-    # UTS < YS (WARNING)
     uts = meas.get("UTS_MPa")
     if uts is not None and ys is not None and uts < ys:
         warnings.append(f"[{mid}] UTS({uts}) < YS({ys}) — 비물리적, 확인 권장")
 
-    # 연신율 범위
     el_val = meas.get("elongation_pct")
     if el_val is not None and not (0 <= el_val <= 100):
         critical.append(f"[{mid}] elongation_pct 범위 이상: {el_val}")
 
-    # BCC 분율 범위
     bcc = meas.get("BCC_fraction_pct")
     if bcc is not None and not (0 <= bcc <= 100):
         critical.append(f"[{mid}] BCC_fraction_pct 범위 이상: {bcc}")
 
-    # 시험 온도 범위
     t = meas.get("test_temp_C")
     if t is not None and not (-273 < t < 2000):
         critical.append(f"[{mid}] test_temp_C 범위 이상: {t}")
 
-    # YS_source_type ↔ test_mode 정합성 (WARNING)
     ys_src = meas.get("YS_source_type")
     if ys_src == "measured_tensile" and test_mode != "tensile":
-        warnings.append(
-            f"[{mid}] YS_source_type=measured_tensile인데 test_mode={test_mode}"
-        )
+        warnings.append(f"[{mid}] YS_source_type=measured_tensile인데 test_mode={test_mode}")
     if ys_src == "measured_compression" and test_mode != "compression":
-        warnings.append(
-            f"[{mid}] YS_source_type=measured_compression인데 test_mode={test_mode}"
-        )
+        warnings.append(f"[{mid}] YS_source_type=measured_compression인데 test_mode={test_mode}")
+
+    conf = meas.get("extraction_confidence")
+    if conf not in {"HIGH", "MED", "LOW", None}:
+        warnings.append(f"[{mid}] extraction_confidence 비정상: {conf}")
 
     return critical, warnings
 
 
 # ══════════════════════════════════════════════════════════════
+# Fix 6: alloy 단위 검증 — CRITICAL alloy만 제거
+# ══════════════════════════════════════════════════════════════
+def validate_and_filter_alloys(data: dict) -> tuple[dict, list[str], list[str], int, int]:
+    """
+    Fix 6: alloy 단위로 검증.
+    CRITICAL이 있는 alloy만 제거하고 나머지는 살림.
+
+    반환:
+        filtered_data   : CRITICAL alloy 제거된 JSON (복사본)
+        warning_msgs    : 경고 메시지 목록
+        critical_msgs   : 제거된 alloy의 CRITICAL 메시지 (로그용)
+        n_kept          : 남은 alloy 수
+        n_removed       : 제거된 alloy 수
+    """
+    filtered_data  = deepcopy(data)
+    warning_msgs   = []
+    critical_msgs  = []
+    kept_alloys    = []
+    n_removed      = 0
+
+    for alloy in data.get("alloys", []):
+        aid = alloy.get("alloy_id", "?")
+        alloy_critical = []
+        alloy_warnings = []
+
+        # alloy 레벨 검증
+        c, w = validate_alloy(alloy)
+        alloy_critical.extend(c)
+        alloy_warnings.extend(w)
+
+        # measurement 레벨 검증
+        for sample in alloy.get("samples", []):
+            for meas in sample.get("measurements", []):
+                c, w = validate_measurement(meas, aid)
+                alloy_critical.extend(c)
+                alloy_warnings.extend(w)
+
+        if alloy_critical:
+            # CRITICAL 있는 alloy 제거
+            n_removed += 1
+            critical_msgs.append(f"  alloy 제외: {aid}")
+            for msg in alloy_critical:
+                critical_msgs.append(f"    CRITICAL: {msg}")
+        else:
+            # 정상 alloy 유지
+            kept_alloys.append(alloy)
+            warning_msgs.extend(alloy_warnings)
+
+    filtered_data["alloys"] = kept_alloys
+    return filtered_data, warning_msgs, critical_msgs, len(kept_alloys), n_removed
+
+
+# ══════════════════════════════════════════════════════════════
 # 논문 전체 검증
 # ══════════════════════════════════════════════════════════════
-def validate_paper_json(data: dict) -> tuple[bool, list[str], list[str]]:
+def validate_paper_json(data: dict) -> tuple[bool, dict, list[str], list[str]]:
     """
     전체 논문 JSON 검증.
-    반환: (통과 여부, critical_list, warning_list)
 
-    Fix 3: critical이 1개라도 있으면 FAIL → validated/ 미복사
-           warning만 있으면 PASS → validated/ 복사 (로그에 기록)
+    Fix 6:
+    - CRITICAL alloy만 제거하고 정상 alloy가 1개 이상이면 PASS
+    - 모든 alloy가 CRITICAL이면 논문 전체 FAIL
+    - validated/ 에는 CRITICAL alloy가 제거된 JSON을 저장
+
+    반환: (통과 여부, 필터링된 data, warning_msgs, critical_msgs)
     """
-    critical_all, warning_all = [], []
     paper = data.get("paper", {})
     pid   = paper.get("paper_id", "?")
 
-    # 필수 메타 — 없으면 CRITICAL
+    # 필수 메타 검증 — 없으면 논문 전체 FAIL (alloy 필터링 전에 체크)
+    meta_critical = []
     for field in ["paper_id", "source_ref", "pdf_hash_md5"]:
         if not paper.get(field):
-            critical_all.append(f"[{pid}] 필수 메타 누락: {field}")
+            meta_critical.append(f"[{pid}] 필수 메타 누락: {field}")
 
-    alloys = data.get("alloys", [])
-    if not alloys:
-        critical_all.append(f"[{pid}] alloys 없음")
-        return False, critical_all, warning_all
+    if meta_critical:
+        return False, data, [], meta_critical
 
-    for alloy in alloys:
-        c, w = validate_alloy(alloy)
-        critical_all.extend(c)
-        warning_all.extend(w)
-        for sample in alloy.get("samples", []):
-            for meas in sample.get("measurements", []):
-                c, w = validate_measurement(meas, alloy.get("alloy_id", "?"))
-                critical_all.extend(c)
-                warning_all.extend(w)
+    if not data.get("alloys"):
+        return False, data, [], [f"[{pid}] alloys 없음"]
 
-    return (len(critical_all) == 0), critical_all, warning_all
+    # Fix 6: alloy 단위 필터링
+    filtered_data, warning_msgs, critical_msgs, n_kept, n_removed = \
+        validate_and_filter_alloys(data)
+
+    if n_kept == 0:
+        # 모든 alloy가 CRITICAL → 논문 전체 FAIL
+        critical_msgs.insert(0, f"[{pid}] 유효한 alloy 없음 — 모든 alloy 제외됨")
+        return False, data, warning_msgs, critical_msgs
+
+    # 정상 alloy 1개 이상 → PASS (일부 제외 정보는 warning에 포함)
+    if n_removed > 0:
+        warning_msgs.insert(0,
+            f"[{pid}] alloy {n_removed}개 제외, {n_kept}개 유지"
+        )
+
+    return True, filtered_data, warning_msgs, critical_msgs
 
 
 # ══════════════════════════════════════════════════════════════
@@ -276,6 +302,7 @@ def main():
 
     log.info(f"검증 시작: {len(files)}개 파일")
     pass_count = fail_count = warn_count = 0
+    total_removed_alloys = 0
 
     for path in files:
         try:
@@ -285,48 +312,57 @@ def main():
             fail_count += 1
             continue
 
-        ok, critical_issues, warning_issues = validate_paper_json(data)
+        ok, filtered_data, warning_msgs, critical_msgs = validate_paper_json(data)
         pid = data.get("paper", {}).get("paper_id", path.stem)
 
-        # Fix 4: 결과 로그 상세화
         if not ok:
             fail_count += 1
             log.error(f"❌ FAIL  [{pid}]")
-            for msg in critical_issues:
-                log.error(f"         CRITICAL: {msg}")
-            for msg in warning_issues:
-                log.warning(f"         WARNING : {msg}")
-            continue   # validated/ 미복사
+            for msg in critical_msgs:
+                log.error(f"  {msg}")
+            continue
 
-        if warning_issues:
+        # alloy 일부 제외된 경우
+        n_original = len(data.get("alloys", []))
+        n_kept     = len(filtered_data.get("alloys", []))
+        n_removed  = n_original - n_kept
+        total_removed_alloys += n_removed
+
+        if n_removed > 0 or warning_msgs:
             warn_count += 1
-            log.warning(f"⚠️  WARN  [{pid}]  ({len(warning_issues)}개 경고)")
-            for msg in warning_issues:
-                log.warning(f"         WARNING : {msg}")
+            log.warning(f"⚠️  WARN  [{pid}]")
+            for msg in critical_msgs:   # 제외된 alloy 정보
+                log.warning(f"  {msg}")
+            for msg in warning_msgs:
+                log.warning(f"  WARNING: {msg}")
         else:
             pass_count += 1
             log.info(f"✅ PASS  [{pid}]")
 
-        # CRITICAL 없으면 validated/ 복사
+        # Fix 6: CRITICAL alloy 제거된 JSON을 validated/에 저장
         dest = VALIDATED_DIR / path.name
-        shutil.copy2(path, dest)
-        log.info(f"         → {dest.relative_to(ROOT)}")
+        dest.write_text(
+            json.dumps(filtered_data, indent=2, ensure_ascii=False),
+            encoding="utf-8"
+        )
+        log.info(f"         → {dest.relative_to(ROOT)}  "
+                 f"(alloy {n_kept}/{n_original}개 유지)")
 
-    # Fix 4: 최종 요약
     log.info(
         f"\n{'='*50}"
         f"\n  검증 완료"
         f"\n{'='*50}"
-        f"\n  PASS       : {pass_count}편"
-        f"\n  WARN(통과) : {warn_count}편  ← 경고 있으나 validated/ 포함"
-        f"\n  FAIL(제외) : {fail_count}편  ← validated/ 미포함"
-        f"\n  합계       : {len(files)}편"
+        f"\n  PASS         : {pass_count}편"
+        f"\n  WARN(통과)   : {warn_count}편  ← alloy 일부 제외 또는 경고"
+        f"\n  FAIL(제외)   : {fail_count}편  ← validated/ 미포함"
+        f"\n  합계         : {len(files)}편"
+        f"\n  제거된 alloy : {total_removed_alloys}개"
         f"\n{'='*50}"
     )
     if fail_count > 0:
         log.warning(
             "FAIL 논문은 data/extracted/ 원본이 그대로 있습니다.\n"
-            "  logs/validation.log 에서 CRITICAL 항목 확인 후 JSON 수정 → 재실행하세요."
+            "  logs/validation.log 에서 내용 확인 후 JSON 수정 → 재실행하세요."
         )
 
 
