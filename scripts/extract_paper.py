@@ -735,6 +735,40 @@ def load_doi_map() -> dict:
     meta = json.loads(meta_path.read_text(encoding="utf-8"))
     return {item["paperId"]: item for item in meta.get("papers", []) if item.get("doi")}
 
+def append_extracted_metadata(paper_id: str, source_paper_id: str, data: dict, meta: dict) -> None:
+    """추출 성공한 논문의 메타데이터를 data/metadata.json에 누적 저장."""
+    meta_path =  ROOT / "data" / "metadata.json" 
+
+    existing = []
+    if meta_path.exists():
+        try:
+            existing = json.loads(meta_path.read_text(encoding="utf-8")).get("papers", [])
+        except Exception:
+            existing = []
+
+    # 중복 paper_id 방지
+    existing_ids = {p.get("paper_id") for p in existing}
+    if paper_id in existing_ids:
+        log.info(f"[{paper_id}] metadata.json에 이미 존재 — 스킵")
+        return
+
+    paper_data = data.get("paper", {})
+    record = {
+        "paper_id":        paper_id,
+        "source_paper_id": source_paper_id,
+        "doi":             meta.get("doi") or paper_data.get("source_ref", "").replace("doi:", "") or None,
+        "title":           meta.get("title")   or paper_data.get("title"),
+        "authors":         meta.get("authors") or paper_data.get("authors"),
+        "year":            meta.get("year")    or paper_data.get("year"),
+        "extracted_at":    datetime.now(timezone.utc).isoformat(),
+    }
+
+    existing.append(record)
+    meta_path.write_text(
+        json.dumps({"papers": existing}, indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    log.info(f"[{paper_id}] metadata.json 기록 완료")
 
 def process_single(file_path, paper_id=None, schema_text="", skip_patch=False):
     if paper_id is None:
@@ -762,7 +796,9 @@ def process_single(file_path, paper_id=None, schema_text="", skip_patch=False):
     out_path = save_extraction(data, paper_id)
     log.info(f"✅ {paper_id}: {out_path}")
     shutil.move(str(file_path), str(PROCESSED_DIR / f"{paper_id}_{file_path.name}"))
+    append_extracted_metadata(paper_id, source_paper_id, data, meta)  # ← 추가
     return out_path
+    
 
 
 def process_batch(schema_text: str = "", skip_patch: bool = False) -> None:

@@ -294,6 +294,67 @@ def api_verify(pdf_path: Path) -> tuple[str, float, str]:
 
 
 # ─────────────────────────────────────────────────────────────
+# 메타데이터 분기 저장
+# ─────────────────────────────────────────────────────────────
+def split_metadata(filtered_dir: Path, results: list[dict]) -> None:
+    """
+    logs/collection_metadata.json을 필터링 결과 기준으로 분기 저장.
+    → filtered/metadata_hea.json    (추출 파이프라인에서 DOI 조회용)
+    → filtered/metadata_maybe.json
+    → filtered/metadata_reject.json
+
+    paperId 매핑 규칙:
+      파일명 stem(확장자 제거)이 collection_metadata의 paperId와 일치해야 함.
+      예: "10_1016_j_jallcom_2022_166473.pdf" → paperId "10_1016_j_jallcom_2022_166473"
+    """
+    meta_path = LOG_DIR / "collection_metadata.json"
+    if not meta_path.exists():
+        log.warning("collection_metadata.json 없음 — 메타데이터 분기 스킵")
+        return
+
+    meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    all_papers = meta.get("papers", [])
+
+    # 파일명 stem → label 매핑
+    label_map = {r["file"].rsplit(".", 1)[0]: r["label"] for r in results}
+
+    buckets: dict[str, list] = {"hea": [], "maybe": [], "reject": [], "unknown": []}
+    for paper in all_papers:
+        pid = paper.get("paperId", "")
+        label = label_map.get(pid, "unknown")
+        buckets[label].append(paper)
+
+    # 각 라벨별로 저장 — 재실행 시 중복 방지를 위해 기존 파일과 병합
+    for label, papers in buckets.items():
+        out_path = filtered_dir / f"metadata_{label}.json"
+        existing = []
+        if out_path.exists():
+            try:
+                existing = json.loads(out_path.read_text(encoding="utf-8")).get("papers", [])
+            except Exception:
+                existing = []
+        existing_ids = {p.get("paperId") for p in existing}
+        merged = existing + [p for p in papers if p.get("paperId") not in existing_ids]
+        out_path.write_text(
+            json.dumps({"papers": merged}, indent=2, ensure_ascii=False),
+            encoding="utf-8",
+        )
+
+    log.info(
+        f"📋 메타데이터 분기 완료 → "
+        f"hea:{len(buckets['hea'])}편 / "
+        f"maybe:{len(buckets['maybe'])}편 / "
+        f"reject:{len(buckets['reject'])}편 / "
+        f"unknown:{len(buckets['unknown'])}편"
+    )
+    if buckets["unknown"]:
+        log.warning(
+            f"  ⚠️  paperId 매핑 실패 {len(buckets['unknown'])}편 "
+            f"(파일명과 paperId가 다를 수 있음)"
+        )
+
+
+# ─────────────────────────────────────────────────────────────
 # 메인 필터링 루프
 # ─────────────────────────────────────────────────────────────
 def filter_papers(inbox_dir: Path, method: str = "vision", api_verify_maybe: bool = False):
@@ -314,13 +375,28 @@ def filter_papers(inbox_dir: Path, method: str = "vision", api_verify_maybe: boo
         log.warning(f"PDF 없음: {inbox_dir}")
         return
 
+    # 이미 filtered/ 하위에 존재하는 파일명 수집 → 스킵 대상
+    already_done = (
+        {p.name for p in hea_dir.glob("*.pdf")}
+        | {p.name for p in maybe_dir.glob("*.pdf")}
+        | {p.name for p in reject_dir.glob("*.pdf")}
+    )
+    if already_done:
+        log.info(f"이미 처리된 파일 {len(already_done)}개 스킵 대상")
+
     log.info(f"필터링 시작: {len(pdfs)}개 파일 (method={method})")
 
     results = []
-    counts = {"hea": 0, "maybe": 0, "reject": 0}
+    counts = {"hea": 0, "maybe": 0, "reject": 0, "skipped": 0}
 
     for i, pdf_path in enumerate(pdfs, 1):
         log.info(f"[{i}/{len(pdfs)}] {pdf_path.name}")
+
+        # 이미 처리된 파일 스킵
+        if pdf_path.name in already_done:
+            log.info(f"  ⏭️  스킵 (이미 처리됨)")
+            counts["skipped"] += 1
+            continue
 
         # 1차 필터링
         if method == "heuristic":
@@ -414,11 +490,16 @@ def filter_papers(inbox_dir: Path, method: str = "vision", api_verify_maybe: boo
         json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8"
     )
 
+    # 메타데이터 분기 저장 (이번 실행에서 새로 처리된 것만 반영)
+    if results:
+        split_metadata(filtered_dir, results)
+
     log.info(f"\n{'='*50}")
     log.info(f"=== 필터링 완료 ===")
     log.info(f"✅ HEA   : {counts['hea']}개 → papers/filtered/hea/")
     log.info(f"⚠️  MAYBE : {counts['maybe']}개 → papers/filtered/maybe/")
     log.info(f"❌ REJECT: {counts['reject']}개 → papers/filtered/reject/")
+    log.info(f"⏭️  SKIP  : {counts['skipped']}개 (이미 처리됨)")
     log.info(f"📄 요약  : {summary_path}")
     log.info(f"{'='*50}")
 
