@@ -187,7 +187,7 @@ textarea::-webkit-scrollbar { display: none; }
           <span class="msg-time" id="initTime"></span>
         </div>
         <div class="msg-text">
-          <p>안녕하세요. BCC 고엔트로피 합금 설계 AI입니다.</p>
+          <p>BCC 고엔트로피 합금 설계 AI입니다.</p>
           <p>목표 물성과 원소 조건을 자연어로 입력하면 <strong>실험 DB → 논문 → ML 예측</strong> 3계층 근거로 조성을 추천합니다.</p>
         </div>
         <div class="suggestions">
@@ -274,7 +274,6 @@ function makeTraceTags(trace) {
     <span class="ttag ok">✓ 파싱</span>
     <span class="ttag ${(trace.sql_count||0)>0?'ok':'info'}">DB ${trace.sql_count||0}건</span>
     <span class="ttag ${(trace.paper_count||0)>0?'ok':'info'}">논문 ${trace.paper_count||0}청크</span>
-    <span class="ttag warn">YS R²=0.607</span>
   </div>`;
 }
 
