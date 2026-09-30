@@ -1,0 +1,186 @@
+@import "tailwindcss";
+
+/* ------------------------------------------------------------------
+   Research workbench theme — "paper" (default) and dark.
+   Instrument-like: quiet surfaces, ink accent, tabular mono numbers.
+------------------------------------------------------------------- */
+:root {
+  /* palette: ink · gray · blue · red */
+  --color-bg: #ffffff;
+  --color-surface: #ffffff;
+  --color-surface-2: #f0f0f0;
+  --color-border: #dddddd;
+  --color-grid: #ebebeb;
+  --color-text: #1c1c1c;
+  --color-text-muted: #6b6b6b;
+  --color-accent: #1c2b48;
+  --color-accent-soft: #e8ebf1;
+  --color-success: #1c2b48;
+  --color-warning: #b3261e;
+  --color-danger: #b3261e;
+  --color-point: #c9c9c9;
+  --color-point-pass: #8c8c8c;
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --color-bg: #1a1a1a;
+  --color-surface: #1a1a1a;
+  --color-surface-2: #252525;
+  --color-border: #363636;
+  --color-grid: #2b2b2b;
+  --color-text: #e6e6e6;
+  --color-text-muted: #9a9a9a;
+  --color-accent: #9fb0cf;
+  --color-accent-soft: #262d3a;
+  --color-success: #9fb0cf;
+  --color-warning: #ef6b62;
+  --color-danger: #ef6b62;
+  --color-point: #444444;
+  --color-point-pass: #7a7a7a;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--color-bg);
+  --color-surface: var(--color-surface);
+  --color-surface-2: var(--color-surface-2);
+  --color-border: var(--color-border);
+  --color-grid: var(--color-grid);
+  --color-text: var(--color-text);
+  --color-text-muted: var(--color-text-muted);
+  --color-accent: var(--color-accent);
+  --color-accent-soft: var(--color-accent-soft);
+  --color-success: var(--color-success);
+  --color-warning: var(--color-warning);
+  --color-danger: var(--color-danger);
+
+  --font-sans: var(--font-inter), Pretendard, -apple-system, BlinkMacSystemFont,
+    "Malgun Gothic", sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, "SFMono-Regular", Consolas,
+    monospace;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+* {
+  scrollbar-color: var(--color-border) transparent;
+  scrollbar-width: thin;
+}
+
+.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* compact data tables */
+.dtable {
+  width: 100%;
+  border-collapse: collapse;
+}
+.dtable {
+  font-size: 0.8125rem;
+}
+.dtable th {
+  text-align: left;
+  font-weight: 500;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  border-bottom: 1px solid var(--color-border);
+  padding: 8px 10px;
+  white-space: nowrap;
+}
+.dtable td {
+  border-bottom: 1px solid var(--color-grid);
+  padding: 8px 10px;
+  vertical-align: middle;
+}
+.dtable tbody tr:last-child td {
+  border-bottom: none;
+}
+/* numeric (right-aligned) cells stay on one line; text cells wrap */
+.dtable td.num.text-right,
+.dtable th {
+  white-space: nowrap;
+}
+.dtable td {
+  overflow-wrap: anywhere;
+}
+.dtable tbody tr:hover {
+  background: var(--color-surface-2);
+}
+
+.field {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 5px 8px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.field:focus {
+  border-color: var(--color-accent);
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: white;
+    color: black;
+    font-size: 11px;
+  }
+  .field {
+    border: 0 !important;
+    border-bottom: 1px solid #999 !important;
+    border-radius: 0 !important;
+  }
+  .print-page {
+    break-after: page;
+    border: none !important;
+  }
+  main {
+    overflow: visible !important;
+  }
+}
+
+@layer components {
+  /* flat page layout — no boxed panels */
+  .card {
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+  }
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+.fade-up {
+  animation: fade-up 0.25s ease-out both;
+}
+
+/* number fields: typed input only — no spinner arrows */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
